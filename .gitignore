@@ -1,0 +1,4 @@
+example/*.so
+example/main
+example/*.o
+example/result
