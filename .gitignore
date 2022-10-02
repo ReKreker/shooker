@@ -1,4 +1,4 @@
 example/*.so
-example/main
+example/leet_add
 example/*.o
-example/result
+internal/__pycache__

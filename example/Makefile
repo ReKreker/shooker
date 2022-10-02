@@ -1,15 +1,18 @@
 CC = gcc
 
+make: compile hook run
+
 compile:
-	$(CC) -c -o test.o test.c
-	$(CC) -shared test.o -o libtest.so
-	$(CC) -O0 -L. -Wall -o main main.c -ltest
+	$(CC) -c -o target.o target.c
+	$(CC) -shared target.o -o libtarget.so
+	$(CC) -O0 -L. -Wall -o leet_add leet_add.c -ltarget
+	rm *.o
 
 hook:
-	./../hooker ./ ./result/
+	./../hooker ./ ./
 
 run:
-	LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):./result ./main
+	LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):./ ./leet_add
 
 gdb:
-	LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):./result gdb -q ./main
+	LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):./ gdb -q ./leet_add

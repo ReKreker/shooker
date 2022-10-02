@@ -1,327 +1,109 @@
 #!/usr/bin/python3
 import lief
-import sys
-import os
 import xml.etree.ElementTree as ET
 
-from lief.ELF import Section, Segment, ARCH, SEGMENT_TYPES, SEGMENT_FLAGS
-from subprocess import run
+from pathlib import Path
+from argparse import ArgumentParser
 
+from internal.asm import Assembler
+from internal.cmp import Compile
+from internal.ftb import FuncTable
+from internal.inj import Inject
 
-class Assembler:
-    """Arch-depended stuff"""
+parser = ArgumentParser()
+parser.add_argument("--xml", type=Path, dest="config", default="hooks.xml",
+                    help="Hook config file (default: target_dir/hooks.xml)")
+parser.add_argument("target_dir", type=Path,
+                    help="Directory with libs to hook")
+parser.add_argument("output_dir", type=Path,
+                    help="Directory to save hooked libs")
+args = parser.parse_args()
 
-    def __init__(self, target):
-        self.bin = target
-        self.arch = self.bin.header.machine_type
+args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def jump(self, target_addr):
-        """Create jmp-instruction to target_addr"""
-        if self.arch == ARCH.x86_64:
-            target_addr -= 5  # length of jmp instr
-            jmp_inst = b"\xE9" + target_addr.to_bytes(4, "little")
-        else:
-            raise Exception(f"Assemble jump isn't implemented for {arch}")
+if not args.target_dir.exists():
+    raise Exception("No target dir found")
 
-        return jmp_inst
+if args.config.name == "hooks.xml":
+    args.config = args.target_dir/"hooks.xml"
+if not args.config.exists():
+    raise Exception("File hook config didnt found")
 
-    def brute_ptl(self, section, target_addr):
-        """Find plt-stub for specific function from .got.plt"""
-        cont = section.content.tobytes()
-        base = section.virtual_address
-        found = False
-
-        if self.arch == ARCH.x86_64:
-            for i in range(len(cont)-5):
-                if cont[i:i+2] == b"\xff\x25":
-                    offset = int.from_bytes(cont[i+2:i+6], "little")
-                    # instruction offset + base of .plt + offset from start .plt + instruction len
-                    if offset + base + i + 6 == target_addr:
-                        found = True
-                        break
-        else:
-            raise Exception(f"Bruteforcing plt isn't implemented for {arch}")
-
-        if not found:
-            raise Exception("Include function not found")
-
-        return base + i
-
-
-class FuncTable:
-    """To resolve funcs"""
-
-    def __init__(self, target):
-        self.bin = target
-        self.fncs = []
-
-    def load_symbol(self, fnc_name):
-        """Get definition of symbol from .text section in hooked lib"""
-        fnc = self.bin.get_static_symbol(fnc_name)
-        if type(fnc) != lief.ELF.Symbol:
-            raise Exception(f"Static function {fnc_name} exception")
-
-        self.fncs.append({"name": fnc.name, "addr": fnc.value})
-
-    def load_import(self, fnc_name):
-        """Get definition of import symbol from .plt section in hooked lib"""
-        fnc = self.bin.get_relocation(fnc_name)
-        if type(fnc) != lief.ELF.Relocation:
-            raise Exception(f"Dynamic function {fnc_name} exception")
-
-        plt = self.bin.get_section(".plt")
-        addr = asm.brute_ptl(plt, fnc.address)
-        self.fncs.append({"name": fnc.symbol.name, "addr": 0x1337})#addr})
-
-    def create_linker_script(self):
-        """Create linker-script for right relative jump to included function"""
-        ldcode = "SECTIONS {\n"
-
-        for fnc in self.fncs:
-            ldcode += f"\t.nonshook.{fnc['name']} {fnc['addr']} : " + "{\n"
-            # ldcode += f"\t.plt {fnc['addr']} : " + "{\n"
-            # ldcode += f"\t\ttranslation.o (.nonshook.{fnc['name']})\n"
-            ldcode += f"\t\ttranslation.o (.plt)\n"
-            ldcode += "\t}\n"
-
-        # for right relative jump to included funcs
-        txt_pos = self.bin.get_section(".shook").virtual_address
-        ldcode += "\t.text " + str(txt_pos) + \
-            " : {\n\t\ttranlation.o (.text)\n\t}\n"
-
-        ldcode += "}\n"
-        f = open(f"{sys.argv[1]}/translation.ld", "w")
-        f.write(ldcode)
-        f.close()
-
-
-class Compile:
-    """Translate "patch" from xml to asm"""
-
-    def __init__(self, cc):
-        self.cc = cc
-        self.code = ""
-        self.inc_libs = []
-        self.inc_fncs = []
-        self.whitelist_funcs = []
-
-    def add_inc_lib(self, inc):
-        t = type(inc)
-        if t == None:
-            raise Exception("Include lib is None")
-
-        self.inc_libs.append(inc)
-
-    def add_inc_func(self, name, proto):
-        if name == None or name == "" or \
-           proto == None or proto == "":
-            raise Exception("Include/proto is None")
-
-        # decl = f'__attribute__((section(".nonshook.{name}")))\n{proto.replace("FUNC", name)}' + "{}"
-        # self.inc_fncs.append(decl)
-
-    def assemble_transl(self):
-        """Some asm-tricks"""
-        # stuff like #include
-        self.code += "\n".join(self.inc_libs) + "\n"
-
-        # heck-trick to avoid broken xref for string from another segment
-        self.code += "#define _s(string) ((char *)(const char []){string})\n"
-
-        # func declaration stuff
-        self.code += "\n".join(self.inc_fncs) + "\n"
-
-    def add_func_to_transl(self, fnc_name, fnc_proto, fnc_code):
-        if fnc_name == "" or fnc_name == None \
-                or fnc_proto == "" or fnc_proto == None \
-                or fnc_code == "":
-            raise Exception(f"Cannot add func with no (name|code|proto)")
-
-        self.code += "\n" +\
-                     fnc_proto.replace("FUNC", fnc_name) +\
-                     "{" +\
-                     fnc_code +\
-                     "}"
-
-        self.whitelist_funcs.append(fnc_name)
-
-    def compile_transl(self):
-        if self.code == "":
-            raise Exception("Code is None")
-
-        trs = open(f"{sys.argv[1]}/translation.c", "w")
-        trs.write(self.code)
-        trs.close()
-
-        cmd = [self.cc, "-fPIC", "--no-builtin", "-c", "-o",
-               f"{sys.argv[1]}/translation.o", f"{sys.argv[1]}/translation.c"]
-
-        out = run(cmd)
-        if out.returncode:
-            print(cmd)
-            raise Exception(out)
-
-        cmd = [self.cc, "-shared", f"{sys.argv[1]}/translation.o", "-o",
-               f"{sys.argv[1]}/libtranslation.so", "-T", f"{sys.argv[1]}/translation.ld"]
-        out = run(cmd)
-        if out.returncode:
-            print(cmd)
-            raise Exception(out)
-
-        funcs_info = {}
-
-        trs_bin = lief.parse(f"{sys.argv[1]}/libtranslation.so")
-        txt = trs_bin.get_section(".text")
-        start = txt.virtual_address
-        end = start + txt.size
-        offset = 0
-
-        for sym in trs_bin.static_symbols:
-            if start <= sym.value and sym.value < end \
-                    and sym.name in self.whitelist_funcs:
-                content = trs_bin.get_content_from_virtual_address(
-                    sym.value, sym.size)
-                funcs_info[sym.name] = {"content": content, "offset": offset}
-                offset += len(content)
-
-        # __import__("IPython").embed() # uncomment to look translation.c & translation.ld
-
-        os.remove(f"{sys.argv[1]}/translation.c")
-        os.remove(f"{sys.argv[1]}/translation.o")
-        os.remove(f"{sys.argv[1]}/translation.ld")
-        os.remove(f"{sys.argv[1]}/libtranslation.so")
-
-        return funcs_info
-
-
-class Inject:
-    """Create shook section and some hooking stuff"""
-
-    def __init__(self, target):
-        self.bin = target
-
-    def shook_sect_init(self):
-        """Create section to find out base address for linker-script"""
-        section = Section(".shook", lief.ELF.SECTION_TYPES.PROGBITS)
-        section += lief.ELF.SECTION_FLAGS.EXECINSTR
-        section += lief.ELF.SECTION_FLAGS.WRITE
-        section.content = [0]*0x2000 # 100500 iq
-        self.bin.add(section, loaded=True)
-        # __import__("IPython").embed()
-
-    def shook_sect_fill(self, content):
-        """Fill section with hooks by compiled payloads"""
-        self.bin.get_section(".shook").content = content
-
-        # section = Section(".shook", lief.ELF.SECTION_TYPES.PROGBITS)
-        # section.type = lief.ELF.SECTION_TYPES.PROGBITS
-        # section += lief.ELF.SECTION_FLAGS.EXECINSTR
-        # section += lief.ELF.SECTION_FLAGS.WRITE
-        # section.content = content
-        # __import__("IPython").embed()
-        # self.bin.add(section, loaded=True)
-
-        # segment = Segment()
-        # segment.content = content
-        # segment.type = SEGMENT_TYPES.LOAD
-        # segment.alignment = 0x1000
-        # segment.add(SEGMENT_FLAGS.X)
-        # segment.add(SEGMENT_FLAGS.R)
-        # self.bin.add(segment, 0x1000)
-
-    def hook(self, fnc_name, hook_offset, payl_offset):
-        """Replace first instruction of function at jump to the payload in .shook section"""
-        target_addr = self.bin.get_section(".shook").virtual_address + \
-            payl_offset - \
-            hook_offset
-        jmp_inst = asm.jump(target_addr)
-
-        value = [i for i in jmp_inst]
-        addr = self.bin.get_static_symbol(fnc_name).value
-        self.bin.patch_address(addr, value)
-
-
-if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        raise Exception("<Usage> hooker dir_with_hooks.xml output_dir")
-
-    config = f"{sys.argv[1]}/hooks.xml"
-    if not os.path.exists(config):
-        raise Exception("File hooks.xml didnt found")
-
-    xml_file = open(config)
+with open(args.config) as xml_file:
     parser = ET.parse(xml_file)
 
-    if not os.path.exists(sys.argv[2]):
-        raise Exception("No output dir found")
+shook = parser.getroot()
+cc = shook.find("compiler").text
 
-    shook = parser.getroot()
-    cc = shook.find("compiler").text
+for lib in shook.iterfind("lib_hook"):
+    lib_path = (args.target_dir/lib.attrib["path"]).name
+    print(f"Patching {lib_path}...")
 
-    for lib in shook.iterfind("lib_hook"):
-        lib_path = f"{sys.argv[1]}/{lib.attrib['path']}"
-        print(f"Patching {lib_path}...")
+    target = lief.parse(lib_path)
 
-        target = lief.parse(lib_path)
+    cs_arch = lib.find("arch")
+    cs_mode = lib.find("mode")
+    if cs_arch == None or cs_mode == None:
+        raise Exception("Dont defined arch or mode for hooked liblary")
+    asm = Assembler(target, cs_arch.text, cs_mode.text)
+    ftb = FuncTable(target, asm)
+    cmpl = Compile(cc, args.target_dir)
+    inj = Inject(target, asm)
+    inj.shook_sect_init()
 
-        inj = Inject(target)
-        inj.shook_sect_init()
-        ftb = FuncTable(target)
-        cmpl = Compile(cc)
-        global asm
-        asm = Assembler(target)
+    for lib in lib.find("include").iterfind("lib"):
+        kind = inc.attrib.get("kind")
+        if kind == "system":
+            inc_value = f"#include <{inc}>"
+        elif kind == "local":
+            inc_value = f"#include \"{inc}\""
+        else:
+            raise Exception("Wrong kind of include lib")
+        cmpl.include_lib(inc_value)
 
-        for lib in lib.find("include").iterfind("lib"):
-            kind = inc.attrib.get("kind")
-            if kind == "system":
-                inc_value = f"#include <{inc}>"
-            elif kind == "local":
-                inc_value = f'#include "{inc}"'
-            else:
-                raise Exception("Wrong kind of include lib")
-            cmpl.add_inc_lib(inc_value)
+    for inc in lib.find("include").iterfind("func"):
+        kind = inc.attrib.get("kind")
+        name = inc.text
+        if kind == "import":
+            addr = ftb.load_import(name)
+        elif kind == "symbol":
+            addr = ftb.load_symbol(name)
+        else:
+            raise Exception("Wrong kind of include func")
+        proto = inc.attrib.get("proto")
+        cmpl.include_func(name, proto, addr)
+    cmpl.assemble_transl()
 
-        for inc in lib.find("include").iterfind("func"):
-            kind = inc.attrib.get("kind")
-            name = inc.text
-            if kind == "import":
-                ftb.load_import(name)
-            elif kind == "symbol":
-                ftb.load_symbol(name)
-            else:
-                raise Exception("Wrong kind of include func")
-            proto = inc.attrib.get("proto")
-            cmpl.add_inc_func(name, proto)
+    for to_hook in lib.iterfind("hook"):
+        fnc_name = to_hook.attrib["name"]
+        print(f"Compiling patch for {fnc_name}")
 
-        ftb.create_linker_script()
-        cmpl.assemble_transl()
+        patch = to_hook.find("patch")
+        if patch == None:
+            raise Exception(f"Patch tag not found")
+        fnc_proto = patch.attrib.get("proto")
+        fnc_code = patch.text
+        cmpl.add_func_to_transl(fnc_name, fnc_proto, fnc_code)
 
-        for to_hook in lib.iterfind("hook"):
-            fnc_name = to_hook.attrib["name"]
-            print(f"Compiling patch for {fnc_name}")
+    segm_addr = target.get_section(".shook").virtual_address
+    funcs_info = cmpl.compile_transl(segm_addr)
+    content = []
+    print("Patching the patch(s)")
+    for func in funcs_info.values():
+        arr = func["content"]
+        offset = func["offset"] + segm_addr
+        content += asm.patch_sub_values(arr, offset)
+    inj.shook_sect_fill(content)
 
-            patch = to_hook.find("patch")
-            if patch == None:
-                raise Exception(f"Patch tag not found")
-            fnc_proto = patch.attrib.get("proto")
-            fnc_code = patch.text
-            cmpl.add_func_to_transl(fnc_name, fnc_proto, fnc_code)
+    for to_hook in lib.iterfind("hook"):
+        fnc_name = to_hook.attrib["name"]
+        print(f"Hooking {fnc_name}")
 
-        funcs_info = cmpl.compile_transl()
-        content = []
-        for func in funcs_info.values():
-            content += func["content"]
-        inj.shook_sect_fill(content)
+        fnc_offset = target.get_static_symbol(
+            fnc_name).value  # address of func
+        # offset of func in created section
+        payl_offset = funcs_info[fnc_name]["offset"]
+        inj.hook(fnc_name, fnc_offset, payl_offset)
 
-        for to_hook in lib.iterfind("hook"):
-            fnc_name = to_hook.attrib["name"]
-            print(f"Hooking {fnc_name}")
-
-            fnc_offset = target.get_static_symbol(
-                fnc_name).value  # address of func
-            # offset of func in created section
-            payl_offset = funcs_info[fnc_name]["offset"]
-            inj.hook(fnc_name, fnc_offset, payl_offset)
-
-        target.write(f"{sys.argv[2]}/{lib.attrib['path']}")
-    print("Lib(s) patched")
+    target.write((args.output_dir/lib.attrib["path"]).name)
+print("Lib(s) patched")

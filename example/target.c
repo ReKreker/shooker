@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include "test.h"
+#include "target.h"
 
 void add_n_print(int x, int y){
-    printf("%d", x+y);
+    printf("%d\n", x+y);
 }

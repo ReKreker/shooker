@@ -1,19 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <shook>
-    <compiler>/usr/bin/gcc</compiler> <!-- tested only with gcc-like compilers -->
-    <lib_hook path="libtest.so">
-        <!-- 1. can include syscall's lib that inlined in asm -->
-        <!-- 2. can include it own lib's funcs and imports  -->
+    <compiler>/usr/bin/gcc</compiler>
+    <lib_hook path="libtarget.so">
+        <arch>CS_ARCH_X86</arch>
+        <mode>CS_MODE_64</mode>
         <include>
-            <func proto="int FUNC(char *, ...)" kind="import">printf</func>  <!-- get import from injected lib -->
-            <!-- <func proto="void (*)(int)" kind="symbol">kek</func> -->    <!-- get symbol from injected lib -->
-            <!-- <lib kind="system">some_lib.h</lib> -->                     <!-- transform to #include <some_lib.h> -->
-            <!-- <lib kind="local">some_lib.h</lib> -->                      <!-- transform to #include "some_lib.h" -->
+            <func proto="int FUNC(char *, ...)" kind="import">printf</func>
         </include>
         <hook name="add_n_print">
-            <!-- have to use _s() for strings to avoid broken xref -->
             <patch proto="void FUNC(int arg1, int arg2)">
-                printf(_s("lolkek"));
+                printf(_s("%d\n"), arg1*100+arg2/100);
             </patch>
         </hook>
     </lib_hook>
