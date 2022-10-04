@@ -1,15 +1,14 @@
 import capstone
 
-from internal.types import *
+from internal.other import *
 
 from lief.ELF import ARCH
-from re import search
 
 
 class Assembler:
     """Arch-depended stuff"""
 
-    def __init__(self, target: liefBin, arch: str, mode: str) -> None:
+    def __init__(self, target: LiefBin, arch: str, mode: str) -> None:
         self.bin = target
         self.arch = self.bin.header.machine_type
         cs_arch, cs_mode = getattr(capstone, arch), getattr(capstone, mode)
@@ -19,36 +18,29 @@ class Assembler:
         """Create jmp-instruction to target_addr"""
         if self.arch == ARCH.x86_64:
             target_addr -= 5  # length of jmp instr
-            jmp_inst = b"\xE9" + target_addr.to_bytes(4, "little")
+            return b"\xE9" + target_addr.to_bytes(4, "little")
         else:
-            raise Exception(f"Assemble jump isn't implemented for {arch}")
+            raise Unimplemented(f"Assemble jump for {arch}")
 
-        return jmp_inst
-
-    def brute_ptl(self, section: liefSect, target_addr: int) -> int:
+    def brute_ptl(self, section: LiefSect, target_addr: int) -> int:
         """Find plt-stub for specific function from .got.plt"""
         cont = section.content.tobytes()
         plt_offs = section.virtual_address
-        found = False
 
         if self.arch == ARCH.x86_64:
             for instr in self.md.disasm(cont, plt_offs):
-                if instr.mnemonic != "jmp" or search(r"word ptr \[rip", instr.op_str) == None:
+                if instr.mnemonic != "jmp" or "word ptr [rip" not in instr.op_str:
                     continue
 
                 instr_offs = int.from_bytes(instr.bytes[2:], "little")
 
                 # offset from instruction + current entry plt position + len of jmp instruction
-                if instr_offs + instr.address + 6 == target_addr:
-                    found = True
-                    break
+                if instr_offs + instr.address + instr.size == target_addr:
+                    return instr.address
         else:
-            raise Exception(f"Bruteforcing plt isn't implemented for {arch}")
+            raise Unimplemented(f"Enumerating plt for {self.arch}")
 
-        if not found:
-            raise Exception("Include function not found")
-
-        return instr.address
+        raise NotFound("Include function not found")
 
     def patch_sub_values(self, func_cont: list, func_offs: int) -> list:
         """Patch values that substracted from rip for relative-call instruction"""
@@ -66,25 +58,35 @@ class Assembler:
                     lea_ip = instr.address
                     register = instr.op_str.replace(", [rip - 7]", "")
 
-                if instr.mnemonic == "sub" and register != None and instr.op_str.startswith(register):
+                if (
+                    instr.mnemonic == "sub"
+                    and register is not None
+                    and instr.op_str.startswith(register)
+                ):
                     sub_instr = instr
 
-                if instr.mnemonic == "call" and sub_instr != None and 2 <= instr.size <= 3:
+                if (
+                    instr.mnemonic == "call"
+                    and sub_instr is not None
+                    and 2 <= instr.size <= 3
+                ):
                     call_ip = instr.address
                     break
 
-            if call_ip == 0:
-                raise Exception("Cannot patch sub-instr")
+            if lea_ip == 0:
+                raise NotFound(f"Get IP instruction")
+            elif sub_instr is None:
+                raise NotFound(f"Sub {register}, #const")
+            elif call_ip == 0:
+                raise NotFound(f"Register-jump instruction")
 
             sub_value = int.from_bytes(sub_instr.bytes[2:], "little")
             relative_offs = func_offs + lea_ip - sub_value
-            sub_bytes = sub_instr.bytes[:2] + \
-                relative_offs.to_bytes(4, "little")
+            sub_bytes = sub_instr.bytes[:2] + relative_offs.to_bytes(4, "little")
 
-            cont[sub_instr.address:sub_instr.address+sub_instr.size] = sub_bytes
+            cont[sub_instr.address : sub_instr.address + sub_instr.size] = sub_bytes
 
         else:
-            raise Exception(
-                f"Patch sub-instruction isn't implemented for {arch}")
+            raise Unimplemented(f"Patch sub-instruction for {arch}")
 
         return [i for i in cont]

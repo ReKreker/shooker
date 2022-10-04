@@ -9,10 +9,10 @@ compile:
 	rm *.o
 
 hook:
-	./../hooker ./ ./
+	./../shooker ./ ./
 
 run:
-	LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):./ ./leet_add
+	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:./ ./leet_add
 
 gdb:
-	LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):./ gdb -q ./leet_add
+	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:./ gdb -q ./leet_add

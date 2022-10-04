@@ -34,9 +34,7 @@ Define which funcs and libs must be imported for patchs. Imported functions can 
 - local: #include "our_lib.h"<br />
 **Only libs with fully-inline functions can be included!**
 ### hook
-Function from library to hook
-#### patch
-Define hook function. Have to use _s() for create stack-based strings to avoid broken xref.
+Define hooked function and hook's code. Have to use _s() for create stack-based strings to avoid broken xref. 
 
 ```
 <?xml version="1.0" encoding="UTF-8"?>
@@ -47,14 +45,16 @@ Define hook function. Have to use _s() for create stack-based strings to avoid b
         <mode>CS_MODE_64</mode>
         <include>
             <func proto="int FUNC(char *, ...)" kind="import">printf</func>  <!-- get import from injected lib -->
-            <!-- <func proto="void FUNC(int)" kind="symbol">kek</func> -->   <!-- get symbol from injected lib -->
+            <func proto="void FUNC(char *)" kind="symbol">do_kek</func>      <!-- get symbol from injected lib -->
             <!-- <lib kind="system">some_lib.h</lib> -->                     <!-- transform to #include <some_lib.h> -->
             <!-- <lib kind="local">some_lib.h</lib> -->                      <!-- transform to #include "some_lib.h" -->
         </include>
-        <hook name="add_n_print">
-            <patch proto="void FUNC(int arg1, int arg2)">
-                printf(_s("%d\n"), arg1*100+arg2/100);
-            </patch>
+        <hook proto="void FUNC(int arg1, int arg2)" name="func1">
+            printf(_s("%d\n"), arg1*100+arg2/100);
+        </hook>
+        <hook proto="void FUNC(char *str)" name="func2">
+            do_kek(str);
+            printf(_s("Keked\n"));
         </hook>
     </lib_hook>
 </shook>

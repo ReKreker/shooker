@@ -1,2 +1,2 @@
-lief=0.12.1
-capstone=4.0.2
+lief==0.12.1
+capstone==4.0.2

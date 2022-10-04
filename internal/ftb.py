@@ -1,10 +1,13 @@
-from internal.types import *
-from internal.asm import Assembler
+from lief import ELF
+from dataclasses import dataclass
+
+from internal.other import *
+
 
 class FuncTable:
     """To resolve funcs"""
 
-    def __init__(self, target: liefBin, asm) -> None:
+    def __init__(self, target: LiefBin, asm) -> None:
         self.bin = target
         self.asm = asm
         self.fncs = []
@@ -12,19 +15,27 @@ class FuncTable:
     def load_symbol(self, fnc_name: str) -> int:
         """Get definition of symbol from .text section in hooked lib"""
         fnc = self.bin.get_static_symbol(fnc_name)
-        if type(fnc) != lief.ELF.Symbol:
-            raise Exception(f"Static function {fnc_name} exception")
+        if not isinstance(fnc, ELF.Symbol):
+            raise NotFound(f"Static function {fnc_name}")
 
-        self.fncs.append({"name": fnc.name, "addr": fnc.value})
+        entry = FuncEntry(fnc.name, fnc.value)
+        self.fncs.append(entry)
         return fnc.value
 
     def load_import(self, fnc_name: str) -> int:
         """Get definition of import symbol from .plt section in hooked lib"""
         fnc = self.bin.get_relocation(fnc_name)
-        if type(fnc) != lief.ELF.Relocation:
-            raise Exception(f"Dynamic function {fnc_name} exception")
+        if not isinstance(fnc, ELF.Relocation):
+            raise NotFound(f"Dynamic function {fnc_name}")
 
         plt = self.bin.get_section(".plt")
-        addr = self.asm.brute_ptl(plt, fnc.address)
-        self.fncs.append({"name": fnc.symbol.name, "addr": addr})
-        return addr
+        jump_addr = self.asm.brute_ptl(plt, fnc.address)
+        entry = FuncEntry(fnc.symbol.name, jump_addr)
+        self.fncs.append(entry)
+        return jump_addr
+
+
+@dataclass
+class FuncEntry:
+    name: str
+    addr: int
