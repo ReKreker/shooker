@@ -8,7 +8,7 @@
             <func proto="int FUNC(char *, ...)" kind="import">printf</func>
         </include>
         <hook proto="void FUNC(int arg1, int arg2)" name="add_n_print">
-            printf(_s("%d\n"), arg1*100+arg2/100);
+			printf(_s("Leet is %d\n"), arg1*100+arg2/100);
         </hook>
     </lib_hook>
 </shook>

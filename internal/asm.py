@@ -1,8 +1,8 @@
 import capstone
 
-from internal.other import *
-
 from lief.ELF import ARCH
+
+from internal.other import *
 
 
 class Assembler:
@@ -18,9 +18,14 @@ class Assembler:
         """Create jmp-instruction to target_addr"""
         if self.arch == ARCH.x86_64:
             target_addr -= 5  # length of jmp instr
-            return b"\xE9" + target_addr.to_bytes(4, "little")
+            jump_inst = b"\xE9" + target_addr.to_bytes(4, "little")
         else:
             raise Unimplemented(f"Assemble jump for {arch}")
+
+        logging.debug(
+            f"Crafted jump-instruction is {jump_inst.hex()} for {hex(target_addr)}"
+        )
+        return jump_inst
 
     def brute_ptl(self, section: LiefSect, target_addr: int) -> int:
         """Find plt-stub for specific function from .got.plt"""
@@ -36,6 +41,7 @@ class Assembler:
 
                 # offset from instruction + current entry plt position + len of jmp instruction
                 if instr_offs + instr.address + instr.size == target_addr:
+                    logging.debug(f"Found plt for {hex(target_addr)}")
                     return instr.address
         else:
             raise Unimplemented(f"Enumerating plt for {self.arch}")
@@ -47,7 +53,7 @@ class Assembler:
 
         cont = bytearray(b"".join([i.to_bytes(1, "big") for i in func_cont]))
         register = None
-        lea_ip = None
+        lea_ip = 0
         sub_instr = None
         call_ip = 0
 
@@ -57,6 +63,9 @@ class Assembler:
                 if instr.mnemonic == "lea" and "[rip - 7]" in instr.op_str:
                     lea_ip = instr.address
                     register = instr.op_str.replace(", [rip - 7]", "")
+                    logging.debug(
+                        f"Register of lea instr found {register} at {hex(func_offs+lea_ip)}"
+                    )
 
                 if (
                     instr.mnemonic == "sub"
@@ -64,6 +73,7 @@ class Assembler:
                     and instr.op_str.startswith(register)
                 ):
                     sub_instr = instr
+                    logging.debug(f"Sub instr found at {hex(func_offs+instr.address)}")
 
                 if (
                     instr.mnemonic == "call"
@@ -71,20 +81,18 @@ class Assembler:
                     and 2 <= instr.size <= 3
                 ):
                     call_ip = instr.address
-                    break
+                    logging.debug(f"Call instr found at {hex(func_offs+call_ip)}")
 
-            if lea_ip == 0:
-                raise NotFound(f"Get IP instruction")
-            elif sub_instr is None:
-                raise NotFound(f"Sub {register}, #const")
-            elif call_ip == 0:
-                raise NotFound(f"Register-jump instruction")
+                if lea_ip != 0 and sub_instr is not None and call_ip != 0:
+                    sub_value = int.from_bytes(sub_instr.bytes[2:], "little")
+                    relative_offs = func_offs + lea_ip - sub_value
+                    sub_bytes = sub_instr.bytes[:2] + relative_offs.to_bytes(4, "little")
 
-            sub_value = int.from_bytes(sub_instr.bytes[2:], "little")
-            relative_offs = func_offs + lea_ip - sub_value
-            sub_bytes = sub_instr.bytes[:2] + relative_offs.to_bytes(4, "little")
+                    cont[sub_instr.address : sub_instr.address + sub_instr.size] = sub_bytes
 
-            cont[sub_instr.address : sub_instr.address + sub_instr.size] = sub_bytes
+                    # zeroing to continue parse function
+                    lea_ip, call_ip = 0, 0
+                    register, sub_instr = None, None
 
         else:
             raise Unimplemented(f"Patch sub-instruction for {arch}")

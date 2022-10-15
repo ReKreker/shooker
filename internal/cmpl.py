@@ -16,6 +16,7 @@ class Compile:
         self.whitelist_funcs = []
 
     def include_lib(self, inc: str) -> None:
+        logging.debug(f"Include lib {inc}")
         if not inc:
             raise NotFound("Include lib")
 
@@ -25,17 +26,30 @@ class Compile:
         if not name or not proto or not addr:
             raise NotFound("Name/proto/addr for include func")
 
-        # use Labels as Values https://gcc.gnu.org/onlinedocs/gcc/Labels-as-Values.html
-        decl = f"#define {name} {name}_jmp: (({proto.replace('FUNC', '(*)')})((long)&&{name}_jmp-{addr}))"
+        # use Labels as Values            https://gcc.gnu.org/onlinedocs/gcc/Labels-as-Values.html
+        # and Statements and Expressions  https://gcc.gnu.org/onlinedocs/gcc/Statement-Exprs.html
+        label = f"UNIQ_LINE({name}_jmp)"
+        decl = (
+            f"#define {name} (({proto.replace('FUNC', '(*)')})"
+            + "({"
+            + f"{label}:(long)&&{label}-{addr};"
+            + "}))"
+        )
+        logging.debug(f"Include func {decl}")
         self.inc_fncs.append(decl)
 
     def assemble_transl(self) -> None:
         """Some asm-tricks"""
         # stuff like #include
-        self.code += "\n".join(self.inc_libs) + "\n"
+        self.code += "\n".join(self.inc_libs)
 
         # asm-trick to avoid broken xref for string from another segment
-        self.code += "#define _s(string) ((char *)(const char []){string})\n"
+        self.code += "\n#define _s(string) ((char *)(const char []){string})\n"
+
+        # asm-trick for unique jump label for relative jump funcs
+        self.code += "\n#define CONCAT_(prefix, suffix) prefix##suffix"
+        self.code += "\n#define CONCAT(prefix, suffix) CONCAT_(prefix, suffix)"
+        self.code += "\n#define UNIQ_LINE(prefix) CONCAT(prefix##_, __LINE__)\n"
 
         # func declaration stuff
         self.code += "\n".join(self.inc_fncs) + "\n"
@@ -57,6 +71,8 @@ class Compile:
 
         # uncomment to look translation.c
         # __import__("IPython").embed()
+
+        logging.debug("="*70 + "\n"+ self.code + "\n" + "="*70)
 
         cmd = [
             self.cc,
@@ -89,6 +105,7 @@ class Compile:
         start = txt.virtual_address
         end = start + txt.size
         offset = 0
+        logging.debug(f"Translation offset {hex(start)}")
 
         # extract bytes of each function
         for sym in trs_bin.static_symbols:
@@ -97,6 +114,7 @@ class Compile:
                 and sym.value < end
                 and sym.name in self.whitelist_funcs
             ):
+                logging.debug(f"Created {sym.name} with size {sym.size}")
                 content = trs_bin.get_content_from_virtual_address(sym.value, sym.size)
                 funcs_info[sym.name] = {"content": content, "offset": offset}
                 offset += len(content)

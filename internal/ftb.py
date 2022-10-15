@@ -20,6 +20,7 @@ class FuncTable:
 
         entry = FuncEntry(fnc.name, fnc.value)
         self.fncs.append(entry)
+        logging.debug(f"Static {entry.name} loaded at {hex(entry.addr)}")
         return fnc.value
 
     def load_import(self, fnc_name: str) -> int:
@@ -32,6 +33,7 @@ class FuncTable:
         jump_addr = self.asm.brute_ptl(plt, fnc.address)
         entry = FuncEntry(fnc.symbol.name, jump_addr)
         self.fncs.append(entry)
+        logging.debug(f"Import {entry.name} loaded at {hex(entry.addr)}")
         return jump_addr
 
 

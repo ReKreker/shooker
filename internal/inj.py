@@ -1,6 +1,6 @@
-from internal.other import *
-
 from lief.ELF import Section, SECTION_FLAGS, SECTION_TYPES
+
+from internal.other import *
 
 
 class Inject:
@@ -14,11 +14,14 @@ class Inject:
     def shook_sect_init(self) -> None:
         """Create section to find out base address for linker"""
         if self.bin.get_section(".shook") is not None:
+            logging.debug("Section .shook exists")
             return
 
+        logging.debug("Create .shook section")
         section = Section(".shook", SECTION_TYPES.PROGBITS)
         section += SECTION_FLAGS.EXECINSTR
         section += SECTION_FLAGS.WRITE
+        section.content = [0]*0x500
         self.bin.add(section, loaded=True)
 
     def shook_sect_fill(self, content: list) -> None:

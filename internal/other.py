@@ -1,4 +1,5 @@
 import lief
+import logging
 
 from pathlib import Path
 from typing import NewType, Dict, List
@@ -12,6 +13,7 @@ __all__ = [
     "NotFound",
     "CompileFail",
     "Wrong",
+    "logging",
 ]
 
 LiefBin = NewType("liefBin", lief.ELF.Binary | lief.MachO.Binary | lief.PE.Binary)
@@ -37,3 +39,6 @@ class CompileFail(Exception):
 class Wrong(Exception):
     def __init__(self, msg):
         pass
+
+
+logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
