@@ -1,5 +1,5 @@
 example/*.so
 example/leet_add
 example/*.o
-internal/__pycache__
-pypi/
+__pycache__
+dist/

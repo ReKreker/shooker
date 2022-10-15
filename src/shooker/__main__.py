@@ -4,11 +4,11 @@ import xml.etree.ElementTree as ET
 
 from argparse import ArgumentParser
 
-from internal.asm import Assembler
-from internal.ftb import FuncTable
-from internal.inj import Inject
-from internal.cmpl import Compile
-from internal.other import *
+from shooker.internal.asm import Assembler
+from shooker.internal.ftb import FuncTable
+from shooker.internal.inj import Inject
+from shooker.internal.cmpl import Compile
+from shooker.internal.other import *
 
 
 def main():

@@ -2,7 +2,7 @@ import capstone
 
 from lief.ELF import ARCH
 
-from internal.other import *
+from shooker.internal.other import *
 
 
 class Assembler:

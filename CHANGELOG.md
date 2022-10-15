@@ -6,6 +6,7 @@
 - add debug logs
 - fix section create bug
 - add common errors note
+- PyPi structure
 
 # 1.0
 Public release

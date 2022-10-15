@@ -1,6 +1,6 @@
 from lief.ELF import Section, SECTION_FLAGS, SECTION_TYPES
 
-from internal.other import *
+from shooker.internal.other import *
 
 
 class Inject:

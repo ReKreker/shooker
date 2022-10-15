@@ -4,5 +4,7 @@
 How to fix:
 ```printf(_s("Leet is %d\n"), arg1*100+arg2/100); printf(_s("Trigger error"));```
 to
-```printf(_s("Leet is %d\n"), arg1*100+arg2/100);
-printf(_s("Test"));```
+```
+printf(_s("Leet is %d\n"), arg1*100+arg2/100);
+printf(_s("Test"));
+```

@@ -8,7 +8,7 @@ Write hook config as described in the [instruction](https://github.com/ReKreker/
 
 ## Install
 ```pip install shooker```<br />
-*Please read about [common errors](https://github.com/ReKreker/shooker/blob/master/docs/common%20errors.md)*
+**Please read about [common errors](https://github.com/ReKreker/shooker/blob/master/docs/common%20errors.md)**
 
 ## Example
 \> ```cd example/``` <br />

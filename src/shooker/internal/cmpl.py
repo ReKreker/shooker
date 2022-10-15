@@ -1,7 +1,7 @@
 from lief import parse
 from subprocess import run
 
-from internal.other import *
+from shooker.internal.other import *
 
 
 class Compile:

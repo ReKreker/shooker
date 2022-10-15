@@ -1,7 +1,7 @@
 from lief import ELF
 from dataclasses import dataclass
 
-from internal.other import *
+from shooker.internal.other import *
 
 
 class FuncTable:

@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "shooker"
+version = "1.1.4"
+authors = [
+  { name="ReKreker" },
+]
+description = "Tool for C-code injections in already compiled bins"
+readme = "README.md"
+requires-python = ">=3.5"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+]
+
+dependencies = [
+	"lief ~= 0.12.1",
+	"capstone ~= 4.0.2",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ReKreker/shooker"
+"Bug Tracker" = "https://github.com/ReKreker/shooker/issues"
+
+[project.scripts]
+shooker = "shooker.__main__:main"
