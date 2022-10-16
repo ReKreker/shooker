@@ -1,10 +1,11 @@
-#### Multiple calls the same func at one line
-```│translation.c:7:51: error: duplicate label ‘func_name_jmp_10’```
+#### Dont use stack-based strings 
+Wrap any string in \_s macro to create stack-based strings with no xref to strings' segment.
 
 How to fix:
-```printf(_s("Leet is %d\n"), arg1*100+arg2/100); printf(_s("Trigger error"));```
+```
+printf("Hello, world!");
+```
 to
 ```
-printf(_s("Leet is %d\n"), arg1*100+arg2/100);
-printf(_s("Test"));
+printf(_s("Hello, world!"));
 ```

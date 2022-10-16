@@ -1,3 +1,7 @@
+# 1.2 (16 Oct 2022)
+## Changes
+- switch from \_\_LINE\_\_ to \_\_COUNTER\_\_ in definition of imported func
+
 # 1.1 (15 Oct 2022)
 ## Changes
 - add changelog

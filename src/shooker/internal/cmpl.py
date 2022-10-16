@@ -26,14 +26,8 @@ class Compile:
         if not name or not proto or not addr:
             raise NotFound("Name/proto/addr for include func")
 
-        # use Labels as Values            https://gcc.gnu.org/onlinedocs/gcc/Labels-as-Values.html
-        # and Statements and Expressions  https://gcc.gnu.org/onlinedocs/gcc/Statement-Exprs.html
-        label = f"UNIQ_LINE({name}_jmp)"
         decl = (
-            f"#define {name} (({proto.replace('FUNC', '(*)')})"
-            + "({"
-            + f"{label}:(long)&&{label}-{addr};"
-            + "}))"
+            f"#define {name} GET_FUNC({proto.replace('FUNC', '(*)')}, {name}, {addr})"
         )
         logging.debug(f"Include func {decl}")
         self.inc_fncs.append(decl)
@@ -47,9 +41,12 @@ class Compile:
         self.code += "\n#define _s(string) ((char *)(const char []){string})\n"
 
         # asm-trick for unique jump label for relative jump funcs
-        self.code += "\n#define CONCAT_(prefix, suffix) prefix##suffix"
-        self.code += "\n#define CONCAT(prefix, suffix) CONCAT_(prefix, suffix)"
-        self.code += "\n#define UNIQ_LINE(prefix) CONCAT(prefix##_, __LINE__)\n"
+        # use Labels as Values            https://gcc.gnu.org/onlinedocs/gcc/Labels-as-Values.html
+        # and Statements and Expressions  https://gcc.gnu.org/onlinedocs/gcc/Statement-Exprs.html
+        self.code += "\n#define GET_FUNC_(proto, func_name, addr, cnt)" +\
+            " ((proto)({func_name##_jmp_##cnt:(long)&&func_name##_jmp_##cnt-addr;}))"
+        self.code += "\n#define GET_FUNC(proto, func_name, addr)" +\
+            " GET_FUNC_(proto, func_name, addr, __COUNTER__)\n"
 
         # func declaration stuff
         self.code += "\n".join(self.inc_fncs) + "\n"
@@ -72,7 +69,7 @@ class Compile:
         # uncomment to look translation.c
         # __import__("IPython").embed()
 
-        logging.debug("="*70 + "\n"+ self.code + "\n" + "="*70)
+        logging.debug("=" * 70 + "\n" + self.code + "\n" + "=" * 70)
 
         cmd = [
             self.cc,

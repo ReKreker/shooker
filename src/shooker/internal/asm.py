@@ -86,9 +86,13 @@ class Assembler:
                 if lea_ip != 0 and sub_instr is not None and call_ip != 0:
                     sub_value = int.from_bytes(sub_instr.bytes[2:], "little")
                     relative_offs = func_offs + lea_ip - sub_value
-                    sub_bytes = sub_instr.bytes[:2] + relative_offs.to_bytes(4, "little")
+                    sub_bytes = sub_instr.bytes[:2] + relative_offs.to_bytes(
+                        4, "little"
+                    )
 
-                    cont[sub_instr.address : sub_instr.address + sub_instr.size] = sub_bytes
+                    cont[
+                        sub_instr.address : sub_instr.address + sub_instr.size
+                    ] = sub_bytes
 
                     # zeroing to continue parse function
                     lea_ip, call_ip = 0, 0

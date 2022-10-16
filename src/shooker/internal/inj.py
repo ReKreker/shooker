@@ -21,7 +21,7 @@ class Inject:
         section = Section(".shook", SECTION_TYPES.PROGBITS)
         section += SECTION_FLAGS.EXECINSTR
         section += SECTION_FLAGS.WRITE
-        section.content = [0]*0x500
+        section.content = [0] * 0x500
         self.bin.add(section, loaded=True)
 
     def shook_sect_fill(self, content: list) -> None:

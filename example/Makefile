@@ -9,7 +9,7 @@ compile:
 	rm *.o
 
 hook:
-	./../shooker ./ ./
+	./../src/shooker/__main__.py ./ ./
 
 run:
 	LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:./ ./leet_add
