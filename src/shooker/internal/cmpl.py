@@ -42,11 +42,16 @@ class Compile:
 
         # asm-trick for unique jump label for relative jump funcs
         # use Labels as Values            https://gcc.gnu.org/onlinedocs/gcc/Labels-as-Values.html
-        # and Statements and Expressions  https://gcc.gnu.org/onlinedocs/gcc/Statement-Exprs.html
-        self.code += "\n#define GET_FUNC_(proto, func_name, addr, cnt)" +\
-            " ((proto)({func_name##_jmp_##cnt:(long)&&func_name##_jmp_##cnt-addr;}))"
-        self.code += "\n#define GET_FUNC(proto, func_name, addr)" +\
-            " GET_FUNC_(proto, func_name, addr, __COUNTER__)\n"
+        # use Statements and Expressions  https://gcc.gnu.org/onlinedocs/gcc/Statement-Exprs.html
+        # use __COUNTER__ to define a uniq jump label
+        self.code += (
+            "\n#define GET_FUNC_(proto, func_name, addr, cnt)"
+            + " ((proto)({func_name##_jmp_##cnt:(long)&&func_name##_jmp_##cnt-addr;}))"
+        )
+        self.code += (
+            "\n#define GET_FUNC(proto, func_name, addr)"
+            + " GET_FUNC_(proto, func_name, addr, __COUNTER__)\n"
+        )
 
         # func declaration stuff
         self.code += "\n".join(self.inc_fncs) + "\n"
@@ -64,10 +69,8 @@ class Compile:
     def compile_transl(self, txt_addr: int) -> FuncsInfo:
         """Compile patch(s)"""
 
+        self.code = fix_indent(self.code)
         (self.path / "translation.c").write_text(self.code)
-
-        # uncomment to look translation.c
-        # __import__("IPython").embed()
 
         logging.debug("=" * 70 + "\n" + self.code + "\n" + "=" * 70)
 
@@ -90,7 +93,7 @@ class Compile:
             self.path / "translation.o",
             "-o",
             self.path / "libtranslation.so",
-            f"-Wl,--section-start=.text={txt_addr}",
+            f"-Wl,--section-start=.text={hex(txt_addr)}",
         ]
         if run(cmd).returncode:
             raise CompileFail(cmd)

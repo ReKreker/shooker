@@ -1,3 +1,10 @@
+# 1.3 (29 Oct 2022)
+## Changes
+- add -fPIC when compiling libtarget.so
+- some black formating
+- fix indents in translation.c
+- fix problem with wrong .text offset
+
 # 1.2 (16 Oct 2022)
 ## Changes
 - switch from \_\_LINE\_\_ to \_\_COUNTER\_\_ in definition of imported func

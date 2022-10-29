@@ -14,6 +14,7 @@ __all__ = [
     "CompileFail",
     "Wrong",
     "logging",
+    "fix_indent",
 ]
 
 LiefBin = NewType("liefBin", lief.ELF.Binary | lief.MachO.Binary | lief.PE.Binary)
@@ -42,3 +43,27 @@ class Wrong(Exception):
 
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
+
+
+def fix_indent(code: str) -> str:
+    res = ""
+    intend_level, offs = 0, 0
+    skip_space = False
+
+    while offs < len(code):
+        char = code[offs]
+        offs += 1
+        if char != "\r" and not (skip_space and char in [" ", "\t"]):
+            res += char
+            skip_space = False
+
+        if char == "{":
+            intend_level += 1
+        elif char == "}":
+            if intend_level > 0:
+                intend_level -= 1
+        elif char == "\n":
+            skip_space = True
+            res += "\t" * intend_level
+
+    return res
