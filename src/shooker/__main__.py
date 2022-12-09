@@ -90,23 +90,23 @@ def main():
 
             logging.info(f"Compiling hook for {fnc_name}")
             cmpl.add_func_to_transl(fnc_name, fnc_proto, fnc_code)
-        segm_addr = target.get_section(".shook").virtual_address
-        funcs_info = cmpl.compile_transl(segm_addr)
+        inj_addr = inj.get_inj_addr()
+        funcs_info = cmpl.compile_transl(inj_addr)
 
         logging.info("Patching the hook(s)...")
         content = []
         for func in funcs_info.values():
             arr = func["content"]
-            offset = func["offset"] + segm_addr
+            offset = func["offset"] + inj_addr
             content += asm.patch_sub_values(arr, offset)
-        inj.shook_sect_fill(content)
+        inj.shook_fill(content)
 
         for to_hook in lib.iterfind("hook"):
             fnc_name = to_hook.attrib["name"]
             logging.info(f"Hooking {fnc_name}")
 
             fnc_offset = target.get_static_symbol(fnc_name).value  # address of func
-            # offset of func in created section
+            # offset of funcs
             payl_offset = funcs_info[fnc_name]["offset"]
             inj.hook(fnc_name, fnc_offset, payl_offset)
 

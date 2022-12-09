@@ -16,3 +16,4 @@ Write hook config as described in the [instruction](https://github.com/ReKreker/
 - Add support of arm architecture
 - Add support hooking raw binaries
 - Develop true hook(not replace)
+- Plug in IDA/Ghidra
