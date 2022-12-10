@@ -1,15 +1,16 @@
 # shook
-Structure map:
-| [default\_cc](#default_cc)
-| | [compiler](#default-compiler)
-| | [arch & mode](#default-arch--mode)
-| [lib\_hook](#lib_hook)
-| | [compiler](#compiler)
-| | [arch & mode](#arch--mode)
-| | [include](#include)
-| | | [func](#func)
-| | | [lib](#lib)
-| | [hook][#hook]
+Structure map:<br />
+[shook](#shook)<br />
+| [default\_cc](#default_cc)<br />
+| | [compiler](#default-compiler)<br />
+| | [arch & mode](#default-arch--mode)<br />
+| [lib\_hook](#lib_hook)<br />
+| | [compiler](#compiler)<br />
+| | [arch & mode](#arch--mode)<br />
+| | [include](#include)<br />
+| | | [func](#func)<br />
+| | | [lib](#lib)<br />
+| | [hook](#hook)<br />
 
 ---
 ## default\_cc
