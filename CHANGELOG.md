@@ -1,4 +1,13 @@
-# 1.3 (29 Oct 2022)
+# 1.2.2 (10 Dec 2022)
+- add default\_cc to hook's parsing
+- move to cmake
+- add test system
+
+# 1.2.1 (9 Dec 2022)
+- refix indents
+- add injections via segments
+
+# 1.2.0 (29 Oct 2022)
 ## Changes
 - add -fPIC when compiling libtarget.so
 - some black formating

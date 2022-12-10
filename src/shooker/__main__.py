@@ -20,8 +20,12 @@ def main():
         default="hooks.xml",
         help="Hook config file (default: target_dir/hooks.xml)",
     )
-    parser.add_argument("target_dir", type=Path, help="Directory with libs to hook")
-    parser.add_argument("output_dir", type=Path, help="Directory to save hooked libs")
+    parser.add_argument("target_dir",
+                        type=Path,
+                        help="Directory with libs to hook")
+    parser.add_argument("output_dir",
+                        type=Path,
+                        help="Directory to save hooked libs")
     args = parser.parse_args()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -32,52 +36,52 @@ def main():
     if args.config.name == "hooks.xml":
         args.config = args.target_dir / "hooks.xml"
     if not args.config.exists():
-        raise NotFound("Hook config")
+        raise NotFound(f"Hook config from {args.config.name}")
 
     with open(args.config) as xml_file:
         parser = ET.parse(xml_file)
 
     shook = parser.getroot()
-    cc = shook.find("compiler").text
+    cmpl = Compile(shook, args.target_dir)
 
     for lib in shook.iterfind("lib_hook"):
-        lib_path = (args.target_dir / lib.attrib["path"]).name
+        lib_path = args.target_dir / lib.attrib["path"]
         logging.info(f"Patching {lib_path}...")
 
-        target = lief.parse(lib_path)
+        target = lief.parse(lib_path.name)
 
-        cs_arch = lib.find("arch")
-        cs_mode = lib.find("mode")
-        if cs_arch is None or cs_mode is None:
+        _, arch, mode = cmpl.parse_all_cc(lib).values()
+        if arch is None or mode is None:
             raise NotFound("Arch or mode for hooked liblary")
-        asm = Assembler(target, cs_arch.text, cs_mode.text)
+        asm = Assembler(target, arch, mode)
         ftb = FuncTable(target, asm)
-        cmpl = Compile(cc, args.target_dir)
         inj = Inject(target, asm)
 
-        # parse included libs
-        for lib in lib.find("include").iterfind("lib"):
-            kind = inc.attrib.get("kind")
-            if kind == "system":
-                inc_value = f"#include <{inc}>"
-            elif kind == "local":
-                inc_value = f'#include "{inc}"'
-            else:
-                raise Wrong("Kind of include lib")
-            cmpl.include_lib(inc_value)
+        inc = lib.find("include")
+        if inc is not None:
+            # parse included libs
+            for inc_lib in inc.iterfind("lib"):
+                kind = inc_lib.attrib.get("kind")
+                if kind == "system":
+                    inc_value = f"#include <{inc}>"
+                elif kind == "local":
+                    inc_value = f'#include "{inc}"'
+                else:
+                    raise Wrong("Kind of include lib")
+                cmpl.include_lib(inc_value)
 
-        # parse included funcs
-        for inc in lib.find("include").iterfind("func"):
-            kind = inc.attrib.get("kind")
-            name = inc.text
-            if kind == "import":
-                addr = ftb.load_import(name)
-            elif kind == "symbol":
-                addr = ftb.load_symbol(name)
-            else:
-                raise Wrong("Kind of include func")
-            proto = inc.attrib.get("proto")
-            cmpl.include_func(name, proto, addr)
+            # parse included funcs
+            for inc_fnc in inc.iterfind("func"):
+                kind = inc_fnc.attrib.get("kind")
+                name = inc_fnc.text
+                if kind == "import":
+                    addr = ftb.load_import(name)
+                elif kind == "symbol":
+                    addr = ftb.load_symbol(name)
+                else:
+                    raise Wrong("Kind of include func")
+                proto = inc_fnc.attrib.get("proto")
+                cmpl.include_func(name, proto, addr)
 
         # define included libs&funcs
         cmpl.assemble_transl()
@@ -105,7 +109,8 @@ def main():
             fnc_name = to_hook.attrib["name"]
             logging.info(f"Hooking {fnc_name}")
 
-            fnc_offset = target.get_static_symbol(fnc_name).value  # address of func
+            fnc_offset = target.get_static_symbol(
+                fnc_name).value  # address of func
             # offset of funcs
             payl_offset = funcs_info[fnc_name]["offset"]
             inj.hook(fnc_name, fnc_offset, payl_offset)

@@ -1,5 +1,3 @@
-example/*.so
-example/leet_add
-example/*.o
+tests/build
 __pycache__
 dist/

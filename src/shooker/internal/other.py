@@ -1,4 +1,5 @@
 import lief
+import xml
 import logging
 
 from pathlib import Path
@@ -15,6 +16,9 @@ __all__ = [
     "Wrong",
     "logging",
     "fix_indent",
+    "XmlElem",
+    "Dict",
+    "List",
 ]
 
 LiefBin = NewType("liefBin",
@@ -22,6 +26,7 @@ LiefBin = NewType("liefBin",
 LiefSect = NewType("liefSec",
                    lief.ELF.Section | lief.MachO.Section | lief.PE.Section)
 FuncsInfo = NewType("funcsInfo", List[Dict[list, int]])
+XmlElem = NewType("xmlElem", xml.etree.ElementTree.Element)
 
 
 class Unimplemented(Exception):

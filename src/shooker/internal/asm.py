@@ -67,32 +67,26 @@ class Assembler:
                         f"Register of lea instr found {register} at {hex(func_offs+lea_ip)}"
                     )
 
-                if (
-                    instr.mnemonic == "sub"
-                    and register is not None
-                    and instr.op_str.startswith(register)
-                ):
+                if (instr.mnemonic == "sub" and register is not None
+                        and instr.op_str.startswith(register)):
                     sub_instr = instr
-                    logging.debug(f"Sub instr found at {hex(func_offs+instr.address)}")
+                    logging.debug(
+                        f"Sub instr found at {hex(func_offs+instr.address)}")
 
-                if (
-                    instr.mnemonic == "call"
-                    and sub_instr is not None
-                    and 2 <= instr.size <= 3
-                ):
+                if (instr.mnemonic == "call" and sub_instr is not None
+                        and 2 <= instr.size <= 3):
                     call_ip = instr.address
-                    logging.debug(f"Call instr found at {hex(func_offs+call_ip)}")
+                    logging.debug(
+                        f"Call instr found at {hex(func_offs+call_ip)}")
 
                 if lea_ip != 0 and sub_instr is not None and call_ip != 0:
                     sub_value = int.from_bytes(sub_instr.bytes[2:], "little")
                     relative_offs = func_offs + lea_ip - sub_value
                     sub_bytes = sub_instr.bytes[:2] + relative_offs.to_bytes(
-                        4, "little"
-                    )
+                        4, "little")
 
-                    cont[
-                        sub_instr.address : sub_instr.address + sub_instr.size
-                    ] = sub_bytes
+                    cont[sub_instr.address:sub_instr.address +
+                         sub_instr.size] = sub_bytes
 
                     # zeroing to continue parse function
                     lea_ip, call_ip = 0, 0

@@ -1,1 +1,0 @@
-void add_n_print(int x, int y);

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shook>
+    <default_cc>
+        <compiler>/usr/bin/gcc</compiler>
+        <arch>CS_ARCH_X86</arch>
+        <mode>CS_MODE_64</mode>
+    </default_cc>
+    <lib_hook path="libvictum.so">
+        <hook proto="int FUNC(int arg1, int arg2)" name="sumTest">
+			return arg1*100+arg2/100;
+        </hook>
+    </lib_hook>
+</shook>
