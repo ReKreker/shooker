@@ -17,27 +17,33 @@ __all__ = [
     "fix_indent",
 ]
 
-LiefBin = NewType("liefBin", lief.ELF.Binary | lief.MachO.Binary | lief.PE.Binary)
-LiefSect = NewType("liefSec", lief.ELF.Section | lief.MachO.Section | lief.PE.Section)
+LiefBin = NewType("liefBin",
+                  lief.ELF.Binary | lief.MachO.Binary | lief.PE.Binary)
+LiefSect = NewType("liefSec",
+                   lief.ELF.Section | lief.MachO.Section | lief.PE.Section)
 FuncsInfo = NewType("funcsInfo", List[Dict[list, int]])
 
 
 class Unimplemented(Exception):
+
     def __init__(self, msg):
         pass
 
 
 class NotFound(Exception):
+
     def __init__(self, msg):
         pass
 
 
 class CompileFail(Exception):
+
     def __init__(self, cmd):
         pass
 
 
 class Wrong(Exception):
+
     def __init__(self, msg):
         pass
 
@@ -47,23 +53,21 @@ logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 
 def fix_indent(code: str) -> str:
     res = ""
-    intend_level, offs = 0, 0
-    skip_space = False
+    intend_level = 0
 
-    while offs < len(code):
-        char = code[offs]
-        offs += 1
-        if char != "\r" and not (skip_space and char in [" ", "\t"]):
-            res += char
-            skip_space = False
+    lines = code.split("\n")
+    for i in range(len(lines)):
+        line = lines[i].strip()
+        for char in line:
+            if char != "\r":
+                res += char
 
-        if char == "{":
-            intend_level += 1
-        elif char == "}":
-            if intend_level > 0:
-                intend_level -= 1
-        elif char == "\n":
-            skip_space = True
-            res += "\t" * intend_level
-
+            if char == "{":
+                intend_level += 1
+            elif len(lines) - 1 != i and lines[i + 1].strip() == "}":
+                intend_level = 0
+            elif char == "}":
+                if intend_level > 0:
+                    intend_level -= 1
+        res += "\n" + " " * 4 * intend_level
     return res
