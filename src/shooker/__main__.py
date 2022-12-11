@@ -48,7 +48,7 @@ def main():
         lib_path = args.target_dir / lib.attrib["path"]
         logging.info(f"Patching {lib_path}...")
 
-        target = lief.parse(lib_path.name)
+        target = lief.parse(str(lib_path.resolve()))
 
         _, arch, mode = cmpl.parse_all_cc(lib).values()
         if arch is None or mode is None:
@@ -76,7 +76,7 @@ def main():
                 name = inc_fnc.text
                 if kind == "import":
                     addr = ftb.load_import(name)
-                elif kind == "symbol":
+                elif kind == "local":
                     addr = ftb.load_symbol(name)
                 else:
                     raise Wrong("Kind of include func")
@@ -115,7 +115,8 @@ def main():
             payl_offset = funcs_info[fnc_name]["offset"]
             inj.hook(fnc_name, fnc_offset, payl_offset)
 
-        target.write((args.output_dir / lib.attrib["path"]).name)
+        outlib_path = str(args.output_dir / lib.attrib["path"])
+        target.write(outlib_path)
     logging.info("Lib(s) patched")
 
 

@@ -1,7 +1,7 @@
 #include "victum.h"
 
 int main() {
-  if (sumTest(13, 3700) != 1337)
+  if (strCmpTest("test1", "test2"))
     return 1;
   return 0;
 }

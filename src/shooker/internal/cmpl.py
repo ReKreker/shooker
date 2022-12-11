@@ -108,7 +108,7 @@ class Compile:
         self.code = fix_indent(self.code)
         (self.path / "translation.c").write_text(self.code)
 
-        logging.debug("=" * 70 + "\n" + self.code + "\n" + "=" * 70)
+        logging.debug("\n" + "=" * 70 + "\n" + self.code + "\n" + "=" * 70)
 
         cmd = run([
             self.curr["compiler"], "-fPIC", "--no-builtin", "-c", "-o",

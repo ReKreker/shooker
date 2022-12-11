@@ -47,7 +47,7 @@ The same as default arch & mode but more this preferred for current library
 Define which funcs and libs must be imported for patchs. Imported functions can be used in any \<patch\> for current library to hook.
 #### func
 - import: it will searching function address from import table
-- symbol: it will searching function from symbols of library for hook
+- local: it will searching function from library for hook
 #### lib
 - system: #include \<system\_lib.h\> 
 - local: #include "our\_lib.h"<br />
@@ -69,7 +69,7 @@ Define hooked function and hook's code. Have to use _s() for create stack-based 
         <mode>CS_MODE_ARM</mode>
         <include>
             <func proto="int FUNC(char *, ...)" kind="import">printf</func>  <!-- get import from injected lib -->
-            <func proto="void FUNC(char *)" kind="symbol">do_kek</func>      <!-- get symbol from injected lib -->
+            <func proto="void FUNC(char *)" kind="local">do_kek</func>      <!-- get local function from injected lib -->
         </include>
         <hook proto="void FUNC(int arg1, int arg2)" name="func1">
             printf(_s("%d\n"), arg1*100+arg2/100);

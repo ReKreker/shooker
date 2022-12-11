@@ -17,6 +17,7 @@ git clone https://github.com/ReKreker/shooker
 cd shooker/tests
 cmake -S. -Bbuild
 pushd build
+make
 make test
 popd
 ```

@@ -19,7 +19,7 @@ else()
     message(FATAL_ERROR "There is no test-sciprt for ${CMAKE_SYSTEM_NAME}") 
 endif()
 
-foreach (test 001LeetAdd)
+foreach (test 001LeetAdd 002IncImportFunc 003IncLocalFunc)
     set(SRC "${CMAKE_SOURCE_DIR}/${test}")
     set(DST "${CMAKE_BINARY_DIR}/${test}")
 

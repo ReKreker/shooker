@@ -1,3 +1,7 @@
+# 1.2.3 (11 Dec 2022)
+- fix always passed tests
+- add a few tests
+
 # 1.2.2 (10 Dec 2022)
 - add default\_cc to hook's parsing
 - move to cmake

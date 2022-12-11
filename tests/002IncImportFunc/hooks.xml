@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shook>
+    <default_cc>
+        <compiler>/usr/bin/gcc</compiler>
+        <arch>CS_ARCH_X86</arch>
+        <mode>CS_MODE_64</mode>
+    </default_cc>
+    <lib_hook path="lib002Lib.so">
+        <include>
+            <func proto="int FUNC(char *, char *)" kind="import">strcmp</func>
+        </include>
+        <hook proto="int FUNC(char *arg1, char* arg2)" name="strCmpTest">
+			return strcmp(_s("test1"), _s("test1"));
+        </hook>
+    </lib_hook>
+</shook>

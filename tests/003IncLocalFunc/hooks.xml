@@ -5,9 +5,12 @@
         <arch>CS_ARCH_X86</arch>
         <mode>CS_MODE_64</mode>
     </default_cc>
-    <lib_hook path="lib001Lib.so">
-        <hook proto="int FUNC(int arg1, int arg2)" name="sumTest">
-			return arg1*100+arg2/100;
+    <lib_hook path="lib003Lib.so">
+        <include>
+            <func proto="int FUNC()" kind="local">alwaysOne</func>
+        </include>
+        <hook proto="int FUNC()" name="localFuncTest">
+			return alwaysOne()-1;
         </hook>
     </lib_hook>
 </shook>
